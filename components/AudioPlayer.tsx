@@ -43,10 +43,8 @@ export default function AudioPlayer({ url, onTimeUpdate, onReady }: AudioPlayerP
       cursorColor: '#fbbf24',
       barWidth: 2,
       barRadius: 3,
-      responsive: true,
       height: 60,
       normalize: true,
-      partialRender: true,
     });
 
     ws.load(url);
