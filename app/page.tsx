@@ -28,9 +28,11 @@ import ChatSidebar from '@/components/ChatSidebar';
 import UploadView from '@/components/UploadView';
 import TimelineView from '@/components/TimelineView';
 import CasesView from '@/components/CasesView';
+import { useAppContext } from '@/lib/context/AppContext';
 import SetupView from '@/components/SetupView';
 
 export default function Home() {
+  const { cases, activeCase } = useAppContext();
   const [activeView, setActiveView] = useState('dashboard');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -49,10 +51,9 @@ export default function Home() {
   };
 
   const stats = [
-    { label: 'Audio Caricati', value: '47', trend: '+5 questa settimana', icon: Upload },
-    { label: 'Ore Trascritte', value: '128h', trend: '+18h questa settimana', icon: Clock },
-    { label: 'Fascicoli Attivi', value: '12', trend: '3 con interrogazioni AI', icon: Folder },
-    { label: 'Query AI', value: '342', trend: '+67 questa settimana', icon: Activity },
+    { label: 'Audio Caricati', value: cases.reduce((acc, c) => acc + (c.audioCount || 0), 0).toString(), trend: 'Caricati su Firebase', icon: Upload },
+    { label: 'Fascicoli Attivi', value: cases.length.toString(), trend: 'In attesa di caricamento', icon: Folder },
+    { label: 'Query AI', value: 'Ready', trend: 'Sistema pronto', icon: Activity },
   ];
 
   return (
@@ -72,6 +73,11 @@ export default function Home() {
               {activeView === 'cases' && 'Gestione Fascicoli'}
               {activeView === 'setup' && 'Configurazione Sistema'}
             </h1>
+            {activeCase && (
+               <span className="px-3 py-1 bg-gold-500/10 text-gold-500 border border-gold-500/20 rounded-full text-[10px] font-bold uppercase tracking-widest hidden sm:inline-block">
+                 Fascicolo Attivo: {activeCase.procedureNumber || activeCase.title}
+               </span>
+            )}
           </div>
           
           <div className="flex items-center gap-6">
@@ -123,20 +129,16 @@ export default function Home() {
                     <button className="text-[10px] text-gold-500 font-bold uppercase tracking-widest hover:underline">Vedi tutto →</button>
                   </div>
                   <div className="space-y-6">
-                    {[
-                      { label: 'Trascrizione completata', sub: 'Intercettazione #142 — Proc. Pen. 4521/2024', time: '10 min fa', icon: 'bg-emerald-500' },
-                      { label: 'Query AI — "Cerca riferimenti a denaro contante"', sub: 'Fascicolo: Rossi M. — 12 risultati', time: '32 min fa', icon: 'bg-blue-500' },
-                      { label: 'Caricamento audio', sub: 'Verbale udienza 15/01 — In elaborazione', time: '1h fa', icon: 'bg-gold-500' },
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-4 group cursor-pointer">
-                        <div className={`w-2 h-2 rounded-full ${item.icon}`} />
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-white group-hover:text-gold-500 transition-colors">{item.label}</p>
-                          <p className="text-xs text-navy-500">{item.sub}</p>
-                        </div>
-                        <span className="text-[10px] text-navy-600 font-mono">{item.time}</span>
+                    {/* Empty State */}
+                    <div className="py-8 flex flex-col items-center justify-center text-center">
+                      <div className="w-12 h-12 rounded-full bg-navy-900 border border-navy-800 mb-4 flex items-center justify-center">
+                        <Activity className="w-5 h-5 text-navy-600" />
                       </div>
-                    ))}
+                      <p className="text-sm font-bold text-navy-300">Nessuna attività registrata</p>
+                      <p className="text-xs text-navy-500 mt-1 max-w-[200px]">
+                        Le tue attività recenti o le acquisizioni in corso compariranno qui.
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -187,6 +189,7 @@ export default function Home() {
           {activeView === 'player' && (
             <div className="flex-1 flex flex-col min-w-0 bg-[#0A0D14]">
               <AudioPlayer 
+                url={activeCase?.audioUrl || undefined}
                 onWaveSurferReady={(ws) => { waveSurferRef.current = ws; }}
                 isPlaying={isPlaying} 
                 onPlayPause={() => setIsPlaying(!isPlaying)}
@@ -205,23 +208,23 @@ export default function Home() {
           {activeView === 'chat' && (
             <div className="flex-1 flex flex-col min-w-0 bg-[#0A0D14]">
               <div className="flex-1 overflow-y-auto p-12 space-y-8 max-w-4xl mx-auto w-full scrollbar-hidden">
-                <div className="bg-[#121620] border border-navy-800/50 rounded-2xl p-6 flex gap-5">
-                  <div className="w-10 h-10 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-gold-500/20">
-                    <Shield className="w-5 h-5 text-navy-950" />
+                {/* Empty State Chat */}
+                <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-500">
+                    <Shield className="w-8 h-8" />
                   </div>
-                  <div className="space-y-4">
-                    <p className="text-navy-100 leading-relaxed">
-                      Analisi completata per il fascicolo **Rossi M.**
-                      Ho rilevato 3 segmenti di interesse riguardanti movimentazioni di valuta non dichiarate.
-                      Come posso aiutarti a interrogare questi dati?
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Assistente Giuridico Pronto</h3>
+                    <p className="text-navy-400 max-w-md mx-auto text-sm mt-2">
+                      Fai una domanda per analizzare un intero fascicolo o per estrarre insight trasversali dalle trascrizioni.
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {['Estrai importi', 'Identifica date', 'Genera sommario'].map(tag => (
-                        <button key={tag} className="px-3 py-1.5 rounded-lg bg-navy-900 text-[10px] font-bold text-navy-400 uppercase tracking-widest border border-navy-800 hover:border-gold-500/30 hover:text-gold-500 transition-all">
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                    {['Estrai importi monetari', 'Riepiloga udienze', 'Trova nomi non in rubrica'].map(tag => (
+                      <button key={tag} className="px-3 py-1.5 rounded-lg bg-navy-900 text-[10px] font-bold text-navy-400 uppercase tracking-widest border border-navy-800 hover:border-gold-500/30 hover:text-gold-500 transition-all">
+                        {tag}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

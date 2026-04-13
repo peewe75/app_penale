@@ -2,6 +2,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { Upload, FileAudio, CheckCircle2, AlertCircle, Loader2, Play } from 'lucide-react';
+import { useAppContext } from '@/lib/context/AppContext';
+import { uploadAudioToFirebase, processAudioWithAI } from '@/lib/api/storage';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -10,6 +12,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 export default function UploadView({ onTranscriptionComplete }: { onTranscriptionComplete: () => void }) {
+  const { activeCaseId, activeCase } = useAppContext();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'completed'>('idle');
@@ -26,33 +29,34 @@ export default function UploadView({ onTranscriptionComplete }: { onTranscriptio
   }, []);
 
   const handleFile = (selectedFile: File) => {
+    if (!activeCaseId) {
+      alert("Seleziona prima un fascicolo attivo dalla Dashboard o dalla sezione Fascicoli per caricare un audio.");
+      return;
+    }
     if (selectedFile.type.startsWith('audio/') || selectedFile.name.endsWith('.mp3') || selectedFile.name.endsWith('.wav')) {
       setFile(selectedFile);
-      startUpload();
+      startUpload(selectedFile);
     } else {
       alert('Per favore, carica un file audio valido (MP3, WAV, M4A).');
     }
   };
 
-  const startUpload = () => {
+  const startUpload = async (selectedFile: File) => {
+    if (!activeCaseId) return;
     setStatus('uploading');
-    let p = 0;
-    const interval = setInterval(() => {
-      p += 5;
-      setProgress(p);
-      if (p >= 100) {
-        clearInterval(interval);
-        startProcessing();
-      }
-    }, 150);
-  };
-
-  const startProcessing = () => {
-    setStatus('processing');
-    // Simula l'IA che lavora
-    setTimeout(() => {
+    try {
+      const url = await uploadAudioToFirebase(selectedFile, activeCaseId, (progress) => {
+        setProgress(progress);
+      });
+      setStatus('processing');
+      // Processiamo audio con AI Deepgram
+      await processAudioWithAI(activeCaseId, url);
       setStatus('completed');
-    }, 3000);
+    } catch (e: any) {
+      console.error(e);
+      alert(`Errore durante l'elaborazione AI: ${e.message || 'Controlla la console'}`);
+      setStatus('idle');
+    }
   };
 
   return (
@@ -60,6 +64,11 @@ export default function UploadView({ onTranscriptionComplete }: { onTranscriptio
       <div className="max-w-2xl w-full">
         <div className="text-center mb-10">
           <h2 className="text-3xl font-bold text-white mb-2">Nuova Acquisizione Audio</h2>
+          {activeCase ? (
+            <p className="text-gold-500 font-bold mb-1">Upload in corso per: {activeCase.title} ({activeCase.procedureNumber})</p>
+          ) : (
+            <p className="text-red-400 font-bold mb-1">Nessun fascicolo attivo! Selezionalo prima di caricare.</p>
+          )}
           <p className="text-navy-400">Trascrizione forense con identificazione degli speaker e analisi contestuale.</p>
         </div>
 

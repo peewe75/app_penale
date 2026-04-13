@@ -16,13 +16,7 @@ interface Message {
 }
 
 export default function ChatSidebar() {
-  const [messages, setMessages] = useState<Message[]>([
-    { 
-      id: '1', 
-      role: 'ai', 
-      content: 'Buongiorno Avvocato. Sono pronto ad assisterla nell\'analisi del Processo Penale 4521/2024. Come posso aiutarla oggi?' 
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -49,20 +43,10 @@ export default function ChatSidebar() {
     setInput('');
     setIsTyping(true);
 
-    // Simulazione risposta AI dall'Architettura.txt
+    // Simulazione del ritardo AI per i test
     setTimeout(() => {
       setIsTyping(false);
-      let response = "Dall'analisi delle trascrizioni disponibili, non ho trovato riferimenti specifici. Può riformulare la domanda?";
-      
-      const lowerInput = input.toLowerCase();
-      if (lowerInput.includes('denaro') || lowerInput.includes('soldi') || lowerInput.includes('200')) {
-        response = "Al minuto [03:10] Rossi M. afferma esplicitamente: 'Ci servono almeno 200 metri di base', che nel contesto sembra essere un codice per 200.000€. Al minuto [05:40] si parla di un bonifico interinale.";
-      } else if (lowerInput.includes('incontri') || lowerInput.includes('martedì')) {
-        response = "Gli speaker pianificano un incontro fisico per martedì prossimo alle ore 21:00. Rossi insiste sulla necessità di vedersi 'senza telefoni'.";
-      } else if (lowerInput.includes('giudice') || lowerInput.includes('ferretti')) {
-        response = "Il nome del Dott. Ferretti compare al minuto [06:05]. Gli interlocutori discutono della sua influenza nell'istruttoria, cercando possibili basi di contatto.";
-      }
-
+      const response = "Modulo AI in attesa di connessione API. Questa è una risposta di test generica per E2E.";
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'ai',
@@ -88,35 +72,43 @@ export default function ChatSidebar() {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => (
-          <div 
-            key={msg.id}
-            className={cn(
-              "flex gap-3 fade-in",
-              msg.role === 'user' ? "flex-row-reverse" : ""
-            )}
-          >
-            {/* Avatar */}
-            <div className={cn(
-              "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1",
-              msg.role === 'ai' 
-                ? "bg-gradient-to-br from-gold-500 to-gold-700" 
-                : "bg-navy-700"
-            )}>
-              {msg.role === 'ai' ? <Bot className="w-4 h-4 text-navy-950" /> : <User className="w-4 h-4 text-gold-400" />}
-            </div>
-
-            {/* Bubble */}
-            <div className={cn(
-              "p-3 rounded-xl max-w-[85%] text-sm leading-relaxed",
-              msg.role === 'ai' 
-                ? "chat-bubble-ai rounded-tl-sm text-navy-100" 
-                : "chat-bubble-user rounded-tr-sm text-navy-200"
-            )}>
-              {msg.content}
-            </div>
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-3 opacity-60">
+             <Bot className="w-10 h-10 text-navy-500 mb-2" />
+             <p className="text-xs font-bold text-navy-300">Assistente AI</p>
+             <p className="text-[10px] text-navy-500 max-w-[200px]">Nessuna conversazione attiva. Fai una domanda per iniziare l'analisi.</p>
           </div>
-        ))}
+        ) : (
+          messages.map((msg) => (
+            <div 
+              key={msg.id}
+              className={cn(
+                "flex gap-3 fade-in",
+                msg.role === 'user' ? "flex-row-reverse" : ""
+              )}
+            >
+              {/* Avatar */}
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1",
+                msg.role === 'ai' 
+                  ? "bg-gradient-to-br from-gold-500 to-gold-700" 
+                  : "bg-navy-700"
+              )}>
+                {msg.role === 'ai' ? <Bot className="w-4 h-4 text-navy-950" /> : <User className="w-4 h-4 text-gold-400" />}
+              </div>
+
+              {/* Bubble */}
+              <div className={cn(
+                "p-3 rounded-xl max-w-[85%] text-sm leading-relaxed",
+                msg.role === 'ai' 
+                  ? "chat-bubble-ai rounded-tl-sm text-navy-100" 
+                  : "chat-bubble-user rounded-tr-sm text-navy-200"
+              )}>
+                {msg.content}
+              </div>
+            </div>
+          ))
+        )}
 
         {isTyping && (
           <div className="flex gap-3 fade-in">

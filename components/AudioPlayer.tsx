@@ -30,7 +30,7 @@ interface AudioPlayerProps {
 }
 
 export default function AudioPlayer({ 
-  url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', 
+  url = '', 
   isPlaying, 
   onPlayPause,
   currentTime,
@@ -59,7 +59,9 @@ export default function AudioPlayer({
       hideScrollbar: true,
     });
 
-    ws.load(url);
+    if (url) {
+      ws.load(url);
+    }
 
     ws.on('ready', () => {
       onDurationChange(ws.getDuration());
@@ -114,7 +116,15 @@ export default function AudioPlayer({
   };
 
   return (
-    <div className="glass-strong p-6 border-b border-navy-700/30 shadow-2xl z-10 transition-all">
+    <div className={cn("glass-strong p-6 border-b border-navy-700/30 shadow-2xl z-10 transition-all relative", !url && "opacity-50 grayscale pointer-events-none")}>
+      {!url && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-navy-900/80 backdrop-blur-sm px-4 py-2 border border-navy-700 rounded-xl flex items-center gap-2">
+            <Volume2 className="w-4 h-4 text-navy-400" />
+            <span className="text-xs font-bold text-navy-300 uppercase tracking-widest">Nessun file audio caricato</span>
+          </div>
+        </div>
+      )}
       <div className="relative group mb-6">
         <div ref={containerRef} className="w-full" />
       </div>
