@@ -67,64 +67,152 @@ export default function Home() {
           currentView={activeView} 
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
         />
-
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-hidden flex">
-          {activeView === 'dashboard' && <DashboardView onSwitchView={setActiveView} />}
+      
+      <div className="flex-1 flex flex-col min-w-0 bg-[#0A0D14] relative">
+        {/* Header dinamico basato sulla vista */}
+        <header className="h-16 border-b border-navy-900/50 flex items-center justify-between px-8 bg-navy-950/50 backdrop-blur-xl z-20">
+          <div className="flex items-center gap-3">
+            <h1 className="text-sm font-bold text-navy-400 uppercase tracking-[0.2em]">
+              {activeView === 'dashboard' && 'Dashboard Overview'}
+              {activeView === 'upload' && 'Nuova Acquisizione'}
+              {activeView === 'player' && 'Player & Trascrizione Forense'}
+              {activeView === 'chat' && 'Analisi Conversazionale'}
+              {activeView === 'timeline' && 'Timeline Analitica'}
+              {activeView === 'cases' && 'Gestione Fascicoli'}
+              {activeView === 'setup' && 'Configurazione Sistema'}
+            </h1>
+          </div>
           
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-navy-400 uppercase tracking-widest">Supabase Connesso</span>
+            </div>
+            <button className="p-2 rounded-lg hover:bg-navy-900 transition-colors text-navy-400">
+              <Bell className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 flex overflow-hidden">
+          {activeView === 'dashboard' && (
+            <div className="flex-1 overflow-y-auto p-8 space-y-10 fade-in">
+              {/* Benvenuto */}
+              <div>
+                <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-navy-400">
+                  Benvenuto, Avvocato
+                </h2>
+                <p className="text-navy-400 mt-1">
+                  Panoramica attività forensi — Ultimo aggiornamento: oggi 18:22
+                </p>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {stats.map((stat, i) => (
+                  <div key={i} className="glass-card rounded-2xl p-6 border border-navy-700/20 hover:border-gold-500/20 transition-all hover:-translate-y-1">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-navy-900 flex items-center justify-center border border-navy-700">
+                        <stat.icon className="w-5 h-5 text-gold-500" />
+                      </div>
+                      <stat.icon className="w-4 h-4 text-white/5" />
+                    </div>
+                    <p className="text-[10px] font-bold text-navy-500 uppercase tracking-[0.1em]">{stat.label}</p>
+                    <p className="text-3xl font-bold text-white my-1">{stat.value}</p>
+                    <p className="text-[10px] text-navy-400">{stat.trend}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Sezioni Inferiori */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 glass-card rounded-3xl border border-navy-700/20 p-8">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-lg font-bold">Attività Recente</h3>
+                    <button className="text-[10px] text-gold-500 font-bold uppercase tracking-widest hover:underline">Vedi tutto →</button>
+                  </div>
+                  <div className="space-y-6">
+                    {[
+                      { type: 'audio', label: 'Trascrizione completata', sub: 'Intercettazione #142 — Proc. Pen. 4521/2024', time: '10 min fa', icon: 'bg-emerald-500' },
+                      { type: 'chat', label: 'Query AI — "Cerca riferimenti a denaro contante"', sub: 'Fascicolo: Rossi M. — 12 risultati', time: '32 min fa', icon: 'bg-blue-500' },
+                      { type: 'system', label: 'Caricamento audio', sub: 'Verbale udienza 15/01 — In elaborazione', time: '1h fa', icon: 'bg-gold-500' },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-4 group cursor-pointer">
+                        <div className={`w-2 h-2 rounded-full ${item.icon}`} />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-white group-hover:text-gold-500 transition-colors">{item.label}</p>
+                          <p className="text-xs text-navy-500">{item.sub}</p>
+                        </div>
+                        <span className="text-[10px] text-navy-600 font-mono">{item.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="glass-card rounded-3xl border border-navy-700/20 p-8">
+                  <h3 className="text-lg font-bold mb-8">Azioni Rapide</h3>
+                  <div className="space-y-4">
+                    <button 
+                      onClick={() => setActiveView('upload')}
+                      className="w-full flex items-center justify-between p-4 rounded-2xl bg-navy-900/50 border border-navy-800 hover:border-gold-500/50 hover:bg-navy-800 group transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
+                          <Plus className="w-5 h-5 text-gold-500" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-bold text-white group-hover:text-gold-500">Carica Audio</p>
+                          <p className="text-[10px] text-navy-500">Nuova intercettazione</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-navy-700 group-hover:text-gold-500" />
+                    </button>
+                    
+                    <button 
+                      onClick={() => setActiveView('chat')}
+                      className="w-full flex items-center justify-between p-4 rounded-2xl bg-navy-900/50 border border-navy-800 hover:border-gold-500/50 hover:bg-navy-800 group transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
+                          <MessageSquare className="w-5 h-5 text-gold-500" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-bold text-white group-hover:text-gold-500">Interroga AI</p>
+                          <p className="text-[10px] text-navy-500">Chat con trascrizioni</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-navy-700 group-hover:text-gold-500" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeView === 'upload' && (
+            <UploadView onTranscriptionComplete={() => setActiveView('player')} />
+          )}
+
           {activeView === 'player' && (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 bg-[#0A0D14]">
               <AudioPlayer 
-                url={audioUrl} 
-                onTimeUpdate={setCurrentTime} 
+                onWaveSurferReady={(ws) => { waveSurferRef.current = ws; }}
+                isPlaying={isPlaying} 
+                onPlayPause={() => setIsPlaying(!isPlaying)}
+                currentTime={currentTime}
+                duration={duration}
+                onTimeUpdate={setCurrentTime}
+                onDurationChange={setDuration}
               />
               <TranscriptionView 
-                segments={segmentsData} 
-                currentTime={currentTime}
-                onSeek={(time) => {
-                  // In un'app reale, passeremmo un ref a Wavesurfer
-                  // Per ora, simuliamo il comportamento
-                  console.log('Seeking to:', time);
-                }}
+                currentTime={currentTime} 
+                onSeek={handleSeek}
               />
             </div>
           )}
 
           {activeView === 'chat' && (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-6">
-                <h2 className="text-2xl font-bold text-white mb-1">Chat Analitica</h2>
-                <p className="text-navy-400 text-sm">Interroga le trascrizioni con precisione forense.</p>
-              </div>
-              <div className="flex-1 flex items-center justify-center text-navy-500 italic">
-                Seleziona una trascrizione nel pannello laterale per iniziare...
-              </div>
-            </div>
-          )}
-
-          {/* Chat Sidebar (sempre visibile o condizionale) */}
-          {(activeView === 'player' || activeView === 'chat') && <ChatSidebar />}
-          
-          {/* Placeholder per le altre viste */}
-          {!['dashboard', 'player', 'chat'].includes(activeView) && (
-            <div className="flex-1 flex items-center justify-center p-10 text-center">
-              <div>
-                <h2 className="text-xl font-bold text-white mb-2">Vista in fase di migrazione</h2>
-                <p className="text-navy-400 max-w-md">Questa sezione del prototipo LegalAI è attualmente in fase di implementazione in React.</p>
-                <button 
-                  onClick={() => setActiveView('dashboard')}
-                  className="mt-6 px-6 py-2 rounded-lg bg-navy-800 border border-navy-700 text-gold-500 hover:bg-navy-700 transition-all"
-                >
-                  Torna alla Dashboard
-                </button>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-    </div>
-  );
-}
 
 // --- SUB-COMPONENTS (Dashboard) ---
 
