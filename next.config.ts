@@ -1,6 +1,8 @@
 import type { NextConfig } from 'next';
-export default { 
+
+const nextConfig: NextConfig = {
   experimental: { serverActions: { bodySizeLimit: '500mb' } },
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true }
+  typescript: { ignoreBuildErrors: true }
 };
+
+export default nextConfig;

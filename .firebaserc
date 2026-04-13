@@ -1,5 +1,7 @@
 {
-  "projects": {},
+  "projects": {
+    "default": "legal-ai-penale"
+  },
   "targets": {},
   "etags": {}
 }
