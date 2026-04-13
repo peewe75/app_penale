@@ -30,7 +30,7 @@ interface AudioPlayerProps {
 }
 
 export default function AudioPlayer({ 
-  url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', // Audio di test
+  url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', 
   isPlaying, 
   onPlayPause,
   currentTime,
@@ -66,11 +66,12 @@ export default function AudioPlayer({
       onWaveSurferReady?.(ws);
     });
 
-    ws.on('audioprocess', () => {
+    ws.on('timeupdate', () => {
       onTimeUpdate(ws.getCurrentTime());
     });
 
-    ws.on('seek', () => {
+    // In v7 'interaction' è il modo per rilevare seek manuali
+    ws.on('interaction', () => {
       onTimeUpdate(ws.getCurrentTime());
     });
 
@@ -81,7 +82,6 @@ export default function AudioPlayer({
     };
   }, [url]);
 
-  // Sincronizza lo stato Play/Pause dal genitore
   useEffect(() => {
     if (!waveSurferRef.current) return;
     if (isPlaying) {
@@ -115,62 +115,45 @@ export default function AudioPlayer({
 
   return (
     <div className="glass-strong p-6 border-b border-navy-700/30 shadow-2xl z-10 transition-all">
-      {/* Waveform Area */}
       <div className="relative group mb-6">
         <div ref={containerRef} className="w-full" />
-        <div className="absolute inset-0 bg-gold-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity rounded-xl" />
       </div>
 
-      {/* Controls Area */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
-          {/* Main Controls Group */}
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => skip(-10)}
-              className="p-2 rounded-lg hover:bg-navy-800 text-navy-400 hover:text-navy-100 transition-all"
-            >
+            <button onClick={() => skip(-10)} className="p-2 rounded-lg hover:bg-navy-800 text-navy-400">
               <SkipBack className="w-5 h-5" />
             </button>
             
             <button 
               onClick={onPlayPause}
-              className="w-14 h-14 rounded-2xl bg-gold-500 hover:bg-gold-400 text-navy-950 flex items-center justify-center transition-all active:scale-90 shadow-[0_0_30px_rgba(212,175,55,0.3)] hover:shadow-[0_0_40px_rgba(212,175,55,0.4)]"
+              className="w-14 h-14 rounded-2xl bg-gold-500 hover:bg-gold-400 text-navy-950 flex items-center justify-center transition-all shadow-lg shadow-gold-500/20"
             >
               {isPlaying ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current ml-1" />}
             </button>
 
-            <button 
-              onClick={() => skip(10)}
-              className="p-2 rounded-lg hover:bg-navy-800 text-navy-400 hover:text-navy-100 transition-all"
-            >
+            <button onClick={() => skip(10)} className="p-2 rounded-lg hover:bg-navy-800 text-navy-400">
               <SkipForward className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="h-10 w-px bg-navy-800" />
-
-          {/* Time Display */}
           <div className="flex flex-col">
             <div className="flex items-baseline gap-1.5 font-mono">
               <span className="text-2xl font-bold text-white tracking-tighter w-20">{formatTime(currentTime)}</span>
               <span className="text-navy-600 text-sm">/</span>
               <span className="text-navy-500 text-sm font-medium">{formatTime(duration)}</span>
             </div>
-            <span className="text-[9px] font-bold text-navy-600 uppercase tracking-widest">Time Index Flow</span>
           </div>
 
-          {/* Speed Controls */}
-          <div className="flex items-center gap-1 bg-navy-900/80 p-1.5 rounded-xl border border-navy-800 shadow-inner">
+          <div className="flex items-center gap-1 bg-navy-900/80 p-1.5 rounded-xl border border-navy-800">
             {[0.5, 1, 1.25, 1.5, 2].map((s) => (
               <button
                 key={s}
                 onClick={() => changeSpeed(s)}
                 className={cn(
                   "px-3 py-1 rounded-lg text-[10px] font-bold transition-all",
-                  playbackRate === s 
-                    ? "bg-gold-500 text-navy-950 shadow-lg shadow-gold-500/20" 
-                    : "text-navy-400 hover:text-navy-200 hover:bg-navy-800"
+                  playbackRate === s ? "bg-gold-500 text-navy-950" : "text-navy-400 hover:text-navy-200"
                 )}
               >
                 {s}x
@@ -180,31 +163,17 @@ export default function AudioPlayer({
         </div>
 
         <div className="flex items-center gap-8">
-          {/* Volume Control */}
           <div className="flex items-center gap-3 group">
-            <Volume2 className={cn("w-5 h-5 transition-colors", volume === 0 ? "text-red-500" : "text-navy-400 group-hover:text-gold-500")} />
-            <div className="relative w-32 h-1.5 bg-navy-800 rounded-full overflow-hidden">
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.01" 
-                value={volume}
-                onChange={handleVolumeChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div 
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-gold-600 to-gold-400 transition-all duration-100" 
-                style={{ width: `${volume * 100}%` }}
-              />
-            </div>
+            <Volume2 className="w-5 h-5 text-navy-400" />
+            <input 
+              type="range" min="0" max="1" step="0.01" value={volume}
+              onChange={handleVolumeChange}
+              className="w-32 h-1.5 bg-navy-800 rounded-full appearance-none cursor-pointer accent-gold-500"
+            />
           </div>
-
-          <div className="flex items-center gap-2 border-l border-navy-800 pl-8">
-            <button className="p-2.5 rounded-xl hover:bg-navy-800 text-navy-400 hover:text-white transition-all">
-              <Maximize2 className="w-5 h-5" />
-            </button>
-          </div>
+          <button className="p-2.5 rounded-xl hover:bg-navy-800 text-navy-400">
+            <Maximize2 className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </div>
