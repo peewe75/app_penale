@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { 
-  Play, 
-  Pause, 
-  Volume2, 
-  Clock,
+import {
+  Play,
+  Pause,
+  Volume2,
   Maximize2,
   SkipBack,
   SkipForward
@@ -29,9 +28,9 @@ interface AudioPlayerProps {
   onWaveSurferReady?: (ws: WaveSurfer) => void;
 }
 
-export default function AudioPlayer({ 
-  url = '', 
-  isPlaying, 
+export default function AudioPlayer({
+  url = '',
+  isPlaying,
   onPlayPause,
   currentTime,
   duration,
@@ -39,16 +38,17 @@ export default function AudioPlayer({
   onDurationChange,
   onWaveSurferReady
 }: AudioPlayerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
+  const waveformRef = useRef<HTMLDivElement>(null);
   const waveSurferRef = useRef<WaveSurfer | null>(null);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!waveformRef.current) return;
 
     const ws = WaveSurfer.create({
-      container: containerRef.current,
+      container: waveformRef.current,
       waveColor: '#1e293b',
       progressColor: '#fbbf24',
       cursorColor: '#fbbf24',
@@ -56,7 +56,7 @@ export default function AudioPlayer({
       barRadius: 3,
       height: 64,
       normalize: true,
-      hideScrollbar: true,
+      hideScrollbar: true
     });
 
     if (url) {
@@ -72,7 +72,6 @@ export default function AudioPlayer({
       onTimeUpdate(ws.getCurrentTime());
     });
 
-    // In v7 'interaction' è il modo per rilevare seek manuali
     ws.on('interaction', () => {
       onTimeUpdate(ws.getCurrentTime());
     });
@@ -82,7 +81,7 @@ export default function AudioPlayer({
     return () => {
       ws.destroy();
     };
-  }, [url]);
+  }, [url, onDurationChange, onTimeUpdate, onWaveSurferReady]);
 
   useEffect(() => {
     if (!waveSurferRef.current) return;
@@ -99,14 +98,24 @@ export default function AudioPlayer({
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value);
-    setVolume(val);
-    waveSurferRef.current?.setVolume(val);
+    const value = parseFloat(e.target.value);
+    setVolume(value);
+    waveSurferRef.current?.setVolume(value);
   };
 
   const skip = (seconds: number) => {
     if (!waveSurferRef.current) return;
     waveSurferRef.current.setTime(waveSurferRef.current.getCurrentTime() + seconds);
+  };
+
+  const toggleFullscreen = async () => {
+    if (!playerRef.current) return;
+
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await playerRef.current.requestFullscreen();
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -116,7 +125,13 @@ export default function AudioPlayer({
   };
 
   return (
-    <div className={cn("glass-strong p-6 border-b border-navy-700/30 shadow-2xl z-10 transition-all relative", !url && "opacity-50 grayscale pointer-events-none")}>
+    <div
+      ref={playerRef}
+      className={cn(
+        'glass-strong p-6 border-b border-navy-700/30 shadow-2xl z-10 transition-all relative',
+        !url && 'opacity-50 grayscale pointer-events-none'
+      )}
+    >
       {!url && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="bg-navy-900/80 backdrop-blur-sm px-4 py-2 border border-navy-700 rounded-xl flex items-center gap-2">
@@ -125,25 +140,38 @@ export default function AudioPlayer({
           </div>
         </div>
       )}
+
       <div className="relative group mb-6">
-        <div ref={containerRef} className="w-full" />
+        <div ref={waveformRef} className="w-full" />
       </div>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => skip(-10)} className="p-2 rounded-lg hover:bg-navy-800 text-navy-400">
+            <button
+              type="button"
+              onClick={() => skip(-10)}
+              className="p-2 rounded-lg hover:bg-navy-800 text-navy-400"
+              aria-label="Torna indietro di 10 secondi"
+            >
               <SkipBack className="w-5 h-5" />
             </button>
-            
-            <button 
+
+            <button
+              type="button"
               onClick={onPlayPause}
               className="w-14 h-14 rounded-2xl bg-gold-500 hover:bg-gold-400 text-navy-950 flex items-center justify-center transition-all shadow-lg shadow-gold-500/20"
+              aria-label={isPlaying ? "Metti in pausa l'audio" : "Riproduci l'audio"}
             >
               {isPlaying ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current ml-1" />}
             </button>
 
-            <button onClick={() => skip(10)} className="p-2 rounded-lg hover:bg-navy-800 text-navy-400">
+            <button
+              type="button"
+              onClick={() => skip(10)}
+              className="p-2 rounded-lg hover:bg-navy-800 text-navy-400"
+              aria-label="Avanza di 10 secondi"
+            >
               <SkipForward className="w-5 h-5" />
             </button>
           </div>
@@ -157,16 +185,17 @@ export default function AudioPlayer({
           </div>
 
           <div className="flex items-center gap-1 bg-navy-900/80 p-1.5 rounded-xl border border-navy-800">
-            {[0.5, 1, 1.25, 1.5, 2].map((s) => (
+            {[0.5, 1, 1.25, 1.5, 2].map((speed) => (
               <button
-                key={s}
-                onClick={() => changeSpeed(s)}
+                key={speed}
+                type="button"
+                onClick={() => changeSpeed(speed)}
                 className={cn(
-                  "px-3 py-1 rounded-lg text-[10px] font-bold transition-all",
-                  playbackRate === s ? "bg-gold-500 text-navy-950" : "text-navy-400 hover:text-navy-200"
+                  'px-3 py-1 rounded-lg text-[10px] font-bold transition-all',
+                  playbackRate === speed ? 'bg-gold-500 text-navy-950' : 'text-navy-400 hover:text-navy-200'
                 )}
               >
-                {s}x
+                {speed}x
               </button>
             ))}
           </div>
@@ -175,13 +204,23 @@ export default function AudioPlayer({
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-3 group">
             <Volume2 className="w-5 h-5 text-navy-400" />
-            <input 
-              type="range" min="0" max="1" step="0.01" value={volume}
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
               onChange={handleVolumeChange}
               className="w-32 h-1.5 bg-navy-800 rounded-full appearance-none cursor-pointer accent-gold-500"
+              aria-label="Volume audio"
             />
           </div>
-          <button className="p-2.5 rounded-xl hover:bg-navy-800 text-navy-400">
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="p-2.5 rounded-xl hover:bg-navy-800 text-navy-400"
+            aria-label="Apri il player a schermo intero"
+          >
             <Maximize2 className="w-5 h-5" />
           </button>
         </div>
