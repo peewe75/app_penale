@@ -10,7 +10,9 @@ export default clerkMiddleware((auth, req) => {
   }
 
   if (pathname === '/dashboard' && !userId) {
-    return NextResponse.redirect(new URL('/landing', req.url));
+    const signInUrl = new URL('/sign-in', req.url);
+    signInUrl.searchParams.set('redirect_url', '/dashboard');
+    return NextResponse.redirect(signInUrl);
   }
 
   if (pathname === '/landing' && userId) {
