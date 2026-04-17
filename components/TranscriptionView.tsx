@@ -47,6 +47,30 @@ export default function TranscriptionView({ currentTime, onSeek }: Transcription
 
   const isSegmentActive = (segment: SegmentData) => currentTime >= segment.time && currentTime < segment.end;
 
+  // Palette ciclica per speaker multipli (Deepgram restituisce "Speaker 0", "Speaker 1", ...)
+  const speakerPalette = [
+    'bg-gold-500/10 text-gold-500 border border-gold-500/20',
+    'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+    'bg-sky-500/10 text-sky-400 border border-sky-500/20',
+    'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+    'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+    'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+  ];
+
+  const getSpeakerStyle = (speaker: string) => {
+    const match = speaker.match(/(\d+)/);
+    if (match) {
+      const idx = parseInt(match[1], 10);
+      return speakerPalette[idx % speakerPalette.length];
+    }
+    // Fallback: hash semplice del nome per assegnare un colore stabile
+    let hash = 0;
+    for (let i = 0; i < speaker.length; i++) {
+      hash = (hash * 31 + speaker.charCodeAt(i)) >>> 0;
+    }
+    return speakerPalette[hash % speakerPalette.length];
+  };
+
   return (
     <div className="flex-1 overflow-y-auto bg-[#0A0D14]" ref={scrollContainerRef}>
       <div className="max-w-4xl mx-auto p-8 space-y-4">
@@ -79,9 +103,7 @@ export default function TranscriptionView({ currentTime, onSeek }: Transcription
                       <div
                         className={cn(
                           'text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md inline-block text-center',
-                          segment.speaker === 'Rossi M.'
-                            ? 'bg-gold-500/10 text-gold-500 border border-gold-500/20'
-                            : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                          getSpeakerStyle(segment.speaker)
                         )}
                       >
                         {segment.speaker}

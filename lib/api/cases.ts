@@ -1,19 +1,3 @@
-import { db } from '../firebase/config';
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc,
-  query,
-  orderBy,
-  serverTimestamp
-} from 'firebase/firestore';
-
-const CASES_COLLECTION = 'cases';
-
 export interface CaseData {
   id?: string;
   title: string;
@@ -21,78 +5,75 @@ export interface CaseData {
   procedureNumber: string;
   category: 'penale' | 'civile' | 'amministrativo' | 'stragiudiziale';
   status: 'active' | 'archived' | 'pending';
-  lastUpdate?: any;
-  createdAt?: any;
+  lastUpdate?: string;
+  createdAt?: string;
   audioCount?: number;
   audioUrl?: string;
+  audioPath?: string | null;
+  audioMimeType?: string | null;
+  audioSize?: number | null;
+}
+
+async function parseJson<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  try {
+    return (text ? JSON.parse(text) : {}) as T;
+  } catch {
+    throw new Error(text || `HTTP ${response.status}`);
+  }
 }
 
 export const getCases = async (): Promise<CaseData[]> => {
-  try {
-    const q = query(collection(db, CASES_COLLECTION), orderBy('lastUpdate', 'desc'));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as CaseData));
-  } catch (error) {
-    console.error("Error fetching cases:", error);
+  const response = await fetch('/api/cases', { method: 'GET' });
+  if (!response.ok) {
+    if (response.status !== 401) {
+      console.error('Error fetching cases:', await response.text());
+    }
     return [];
   }
+
+  const payload = await parseJson<{ cases?: CaseData[] }>(response);
+  return payload.cases ?? [];
 };
 
 export const getCaseById = async (id: string): Promise<CaseData | null> => {
-  try {
-    const docRef = doc(db, CASES_COLLECTION, id);
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-      return { id: snapshot.id, ...snapshot.data() } as CaseData;
-    }
-    return null;
-  } catch (error) {
-    console.error("Error fetching case:", error);
-    return null;
-  }
+  const cases = await getCases();
+  return cases.find((caseItem) => caseItem.id === id) ?? null;
 };
 
 export const createCase = async (caseData: Omit<CaseData, 'id' | 'createdAt' | 'lastUpdate'>) => {
-  try {
-    const docRef = await addDoc(collection(db, CASES_COLLECTION), {
-      ...caseData,
-      audioCount: caseData.audioCount || 0,
-      createdAt: serverTimestamp(),
-      lastUpdate: serverTimestamp()
-    });
-    return docRef.id;
-  } catch (error) {
-    console.error("Error creating case:", error);
-    throw error;
+  const response = await fetch('/api/cases', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(caseData),
+  });
+
+  if (!response.ok) {
+    throw new Error((await response.text()) || 'Errore nella creazione del fascicolo.');
   }
+
+  const payload = await parseJson<{ case?: CaseData }>(response);
+  return payload.case?.id ?? '';
 };
 
 export const updateCaseData = async (id: string, updateData: Partial<CaseData>) => {
-  try {
-    const docRef = doc(db, CASES_COLLECTION, id);
-    await updateDoc(docRef, {
-      ...updateData,
-      lastUpdate: serverTimestamp()
-    });
-    return true;
-  } catch (error) {
-    console.error("Error updating case:", error);
-    throw error;
+  const response = await fetch(`/api/cases/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData),
+  });
+
+  if (!response.ok) {
+    throw new Error((await response.text()) || 'Errore aggiornamento fascicolo.');
   }
+
+  return true;
 };
 
 export const deleteCase = async (id: string) => {
-  try {
-    const docRef = doc(db, CASES_COLLECTION, id);
-    await deleteDoc(docRef);
-    // Note: Non cancella le sotto-collezioni (trascrizioni/audio) automaticamente 
-    // su Firebase Web Client, andrebbero aggiunte cloud functions per pulizia completa
-    return true;
-  } catch (error) {
-    console.error("Error deleting case:", error);
-    throw error;
+  const response = await fetch(`/api/cases/${id}`, { method: 'DELETE' });
+  if (!response.ok) {
+    throw new Error((await response.text()) || 'Errore eliminazione fascicolo.');
   }
+  return true;
 };

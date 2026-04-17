@@ -1,15 +1,3 @@
-import { db } from '../firebase/config';
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  addDoc, 
-  query,
-  orderBy,
-  serverTimestamp,
-  where
-} from 'firebase/firestore';
-
 export interface SegmentData {
   id?: string;
   caseId: string;
@@ -28,75 +16,66 @@ export interface TimelineEventData {
   title: string;
   desc: string;
   iconName?: string;
-  createdAt?: any;
+  createdAt?: string;
 }
 
-const SEGMENTS_COLLECTION = 'segments';
-const EVENTS_COLLECTION = 'events';
-
-// ============== TRASCRIZIONI (Segments) ==============
+async function parseJson<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  try {
+    return (text ? JSON.parse(text) : {}) as T;
+  } catch {
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+}
 
 export const getSegmentsByCaseId = async (caseId: string): Promise<SegmentData[]> => {
-  try {
-    const q = query(
-      collection(db, SEGMENTS_COLLECTION), 
-      where('caseId', '==', caseId),
-      orderBy('time', 'asc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as SegmentData));
-  } catch (error) {
-    console.error("Error fetching segments:", error);
+  const response = await fetch(`/api/cases/${caseId}/segments`, { method: 'GET' });
+  if (!response.ok) {
+    console.error('Error fetching segments:', await response.text());
     return [];
   }
+
+  const payload = await parseJson<{ segments?: SegmentData[] }>(response);
+  return payload.segments ?? [];
 };
 
 export const addSegment = async (segmentData: Omit<SegmentData, 'id'>) => {
-  try {
-    const docRef = await addDoc(collection(db, SEGMENTS_COLLECTION), {
-      ...segmentData,
-      createdAt: serverTimestamp()
-    });
-    return docRef.id;
-  } catch (error) {
-    console.error("Error adding segment:", error);
-    throw error;
+  const response = await fetch(`/api/cases/${segmentData.caseId}/segments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(segmentData),
+  });
+
+  if (!response.ok) {
+    throw new Error((await response.text()) || 'Errore aggiunta segmento.');
   }
+
+  const payload = await parseJson<{ segment?: SegmentData }>(response);
+  return payload.segment?.id ?? '';
 };
 
-
-// ============== TIMELINE (Events) ==============
-
 export const getEventsByCaseId = async (caseId: string): Promise<TimelineEventData[]> => {
-  try {
-    const q = query(
-      collection(db, EVENTS_COLLECTION), 
-      where('caseId', '==', caseId),
-      orderBy('time', 'asc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as TimelineEventData));
-  } catch (error) {
-    console.error("Error fetching events:", error);
+  const response = await fetch(`/api/cases/${caseId}/events`, { method: 'GET' });
+  if (!response.ok) {
+    console.error('Error fetching events:', await response.text());
     return [];
   }
+
+  const payload = await parseJson<{ events?: TimelineEventData[] }>(response);
+  return payload.events ?? [];
 };
 
 export const addEvent = async (eventData: Omit<TimelineEventData, 'id' | 'createdAt'>) => {
-  try {
-    const docRef = await addDoc(collection(db, EVENTS_COLLECTION), {
-      ...eventData,
-      createdAt: serverTimestamp()
-    });
-    return docRef.id;
-  } catch (error) {
-    console.error("Error adding event:", error);
-    throw error;
+  const response = await fetch(`/api/cases/${eventData.caseId}/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(eventData),
+  });
+
+  if (!response.ok) {
+    throw new Error((await response.text()) || 'Errore aggiunta evento.');
   }
+
+  const payload = await parseJson<{ event?: TimelineEventData }>(response);
+  return payload.event?.id ?? '';
 };

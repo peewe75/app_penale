@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, FileAudio, CheckCircle2, AlertCircle, Loader2, Play } from 'lucide-react';
 import { useAppContext } from '@/lib/context/AppContext';
-import { uploadAudioToFirebase, processAudioWithAI } from '@/lib/api/storage';
+import { uploadAudioToSupabase, processAudioWithAI } from '@/lib/api/storage';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -45,7 +45,7 @@ export default function UploadView({ onTranscriptionComplete }: { onTranscriptio
     if (!activeCaseId) return;
     setStatus('uploading');
     try {
-      const url = await uploadAudioToFirebase(selectedFile, activeCaseId, (progress) => {
+      const url = await uploadAudioToSupabase(selectedFile, activeCaseId, (progress) => {
         setProgress(progress);
       });
       setStatus('processing');

@@ -45,7 +45,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
           </div>
           <div>
             <h1 className="text-lg font-bold gradient-text tracking-tight">LegalAI</h1>
-            <p className="text-[10px] text-navy-400 uppercase tracking-widest font-medium">Penale Intelligence</p>
+            <p className="text-[10px] text-navy-400 uppercase tracking-widest font-medium">BCS Penale Intelligence</p>
           </div>
         </div>
       </div>

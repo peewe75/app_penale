@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Cpu, Database, Key, Bell, Check, CreditCard, Zap } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { env } from '@/lib/env';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -132,16 +133,16 @@ export default function SetupView() {
                 <CreditCard className="w-8 h-8 text-gold-500" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-white mb-1">Crediti Residui: 1.250</h3>
-                <p className="text-navy-400 text-sm">Equivalenti a circa 21 ore di trascrizione HQ.</p>
+                <h3 className="text-2xl font-bold text-white mb-1">Billing centralizzato in BCS</h3>
+                <p className="text-navy-400 text-sm">Piani, Stripe e accessi premium restano governati da ultrabot.space.</p>
               </div>
               <a
-                href="https://console.firebase.google.com/project/legal-ai-penale/usage/details"
+                href={`${env.bcsAppUrl}/admin`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex px-10 py-3 rounded-xl bg-gold-500 text-navy-950 hover:bg-gold-400 transition-all font-bold shadow-lg shadow-gold-500/20 mx-auto"
               >
-                Apri Billing Firebase
+                Apri BCS Admin
               </a>
             </div>
           )}

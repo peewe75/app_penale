@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Bell,
   Upload,
@@ -25,6 +25,7 @@ import CasesView from '@/components/CasesView';
 import { useAppContext } from '@/lib/context/AppContext';
 import SetupView from '@/components/SetupView';
 import type { CaseData } from '@/lib/api/cases';
+import { getSegmentsByCaseId, type SegmentData } from '@/lib/api/transcripts';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -43,7 +44,7 @@ const promptChips = [
 ];
 
 export default function Home() {
-  const { cases, activeCase } = useAppContext();
+  const { cases, activeCase, activeCaseId } = useAppContext();
   const [activeView, setActiveView] = useState('dashboard');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -51,8 +52,29 @@ export default function Home() {
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatResponding, setIsChatResponding] = useState(false);
+  const [chatSegments, setChatSegments] = useState<SegmentData[]>([]);
 
   const waveSurferRef = useRef<any>(null);
+
+  // Carica i segmenti del fascicolo attivo per la chat principale
+  useEffect(() => {
+    if (!activeCaseId) {
+      setChatSegments([]);
+      return;
+    }
+    let cancelled = false;
+    getSegmentsByCaseId(activeCaseId).then((data) => {
+      if (!cancelled) setChatSegments(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCaseId]);
+
+  // Reset della chat quando cambia fascicolo
+  useEffect(() => {
+    setChatMessages([]);
+  }, [activeCaseId]);
 
   const handleSeek = (time: number) => {
     if (waveSurferRef.current) {
@@ -71,7 +93,7 @@ export default function Home() {
     setChatInput(prompt);
   };
 
-  const handleChatSend = () => {
+  const handleChatSend = async () => {
     const prompt = chatInput.trim();
     if (!prompt || isChatResponding) return;
 
@@ -81,29 +103,61 @@ export default function Home() {
       content: prompt
     };
 
-    const assistantReply: ChatMessage = {
-      id: `${Date.now()}-assistant`,
-      role: 'assistant',
-      content: activeCase
-        ? `Analisi preliminare pronta per il fascicolo ${activeCase.title}. Posso aiutarti su trascrizioni, timeline ed eventi critici.`
-        : 'Seleziona prima un fascicolo dalla sezione Fascicoli oppure carica un audio per ottenere un contesto reale.'
-    };
-
-    setChatMessages((prev) => [...prev, userMessage]);
+    const nextMessages = [...chatMessages, userMessage];
+    setChatMessages(nextMessages);
     setChatInput('');
     setIsChatResponding(true);
 
-    window.setTimeout(() => {
-      setChatMessages((prev) => [...prev, assistantReply]);
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+          segments: chatSegments.map((s) => ({
+            time: s.time,
+            end: s.end,
+            speaker: s.speaker,
+            text: s.text
+          })),
+          caseTitle: activeCase?.title
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(err.error || 'Errore sconosciuto.');
+      }
+
+      const data = await response.json();
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          content: data.reply || '(Risposta vuota.)'
+        }
+      ]);
+    } catch (err: any) {
+      console.error('Chat error:', err);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant-error`,
+          role: 'assistant',
+          content: `Errore nella chiamata AI: ${err?.message || 'riprova più tardi.'}`
+        }
+      ]);
+    } finally {
       setIsChatResponding(false);
-    }, 500);
+    }
   };
 
   const stats = [
     {
       label: 'Audio Caricati',
       value: cases.reduce((acc, c) => acc + (c.audioCount || 0), 0).toString(),
-      trend: 'Caricati su Firebase',
+      trend: 'Caricati su Supabase',
       icon: Upload
     },
     {
@@ -141,7 +195,7 @@ export default function Home() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-navy-400 uppercase tracking-widest">Firebase & AI Connessi</span>
+              <span className="text-[10px] font-bold text-navy-400 uppercase tracking-widest">BCS & AI Connessi</span>
             </div>
             <button
               type="button"

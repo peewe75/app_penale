@@ -1,85 +1,64 @@
-import { storage } from '../firebase/config';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { addSegment, addEvent } from './transcripts';
 import { updateCaseData } from './cases';
 
-export const uploadAudioToFirebase = (
-  file: File, 
-  caseId: string, 
-  onProgress: (progress: number) => void
+function readJsonSafely(text: string) {
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return null;
+  }
+}
+
+export const uploadAudioToSupabase = (
+  file: File,
+  caseId: string,
+  onProgress: (progress: number) => void,
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const storageRef = ref(storage, `cases/${caseId}/${file.name}-${Date.now()}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const formData = new FormData();
+    formData.append('file', file);
 
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        onProgress(progress);
-      }, 
-      (error) => {
-        console.error("Upload error:", error);
-        reject(error);
-      }, 
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        resolve(downloadURL);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api/cases/${caseId}/audio/upload`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress((event.loaded / event.total) * 100);
       }
-    );
+    };
+
+    xhr.onerror = () => reject(new Error('Upload audio non riuscito.'));
+    xhr.onload = () => {
+      const payload = readJsonSafely(xhr.responseText) as { audioUrl?: string; audioPath?: string; error?: string } | null;
+      if (xhr.status >= 200 && xhr.status < 300 && payload?.audioUrl) {
+        resolve(payload.audioUrl);
+        return;
+      }
+      reject(new Error(payload?.error || xhr.responseText || 'Errore upload audio.'));
+    };
+
+    xhr.send(formData);
   });
 };
 
 /**
- * Chiama l'API Next.js proxy verso Deepgram per la diarization reale
+ * Esegue il processing AI del file appena caricato, poi salva segmenti ed eventi
+ * tramite gli endpoint server centralizzati su Supabase/BCS.
  */
 export const processAudioWithAI = async (caseId: string, audioUrl: string) => {
-  // Salva l'URL dell'audio nel fascicolo (per permettere di riprodurlo dal player)
-  await updateCaseData(caseId, {
-    audioCount: 1, // o incremetare se ne facciamo multipli
-    audioUrl: audioUrl
+  await updateCaseData(caseId, { audioUrl });
+
+  const response = await fetch(`/api/cases/${caseId}/audio/process`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ audioUrl }),
   });
 
-  try {
-    const response = await fetch('/api/transcribe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ url: audioUrl })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Errore API: ${await response.text()}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.segments && Array.isArray(data.segments)) {
-      // Salva ogni segmento nel database
-      for (const seg of data.segments) {
-        await addSegment({
-          caseId,
-          time: seg.time,
-          end: seg.end,
-          speaker: seg.speaker,
-          text: seg.text
-        });
-      }
-    }
-
-    // Genera un paio di eventi fittizi o estratti (da ultimare post-MVP)
-    await addEvent({
-      caseId,
-      time: "00:00",
-      type: "alert",
-      title: "Trascrizione Avviata",
-      desc: "L'analisi Deepgram è stata completata con successo."
-    });
-
-    return data.segments;
-  } catch (err) {
-    console.error("Errore elaborazione AI Reale:", err);
-    // In caso di errore API (es. Deepgram Key mancante)
-    throw err;
+  if (!response.ok) {
+    throw new Error(`Errore processing audio: ${await response.text()}`);
   }
+
+  const data = await response.json();
+  return data.segments ?? [];
 };

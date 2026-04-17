@@ -43,7 +43,7 @@ export default function Header({ currentView, onToggleSidebar }: HeaderProps) {
         {/* Connection Status */}
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg glass text-xs text-navy-400">
           <span className="w-2 h-2 rounded-full bg-emerald-500 pulse-dot" />
-          Firebase Connesso
+          BCS Connesso
         </div>
 
         {/* Notifications */}
